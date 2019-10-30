@@ -41,16 +41,17 @@ class Storage():
         new_score.value = value#+random.randint(1, 1234)
         new_score.put()
 
-    def get_score(self):
-        score_query = Score.query(ancestor=self.score_key())#.order(-Score.timestamp)
-        return score_query.get().score
+    def get_value(self, key):
+        score_query = Score.query(ancestor=key)#.order(-Score.timestamp)
+        return score_query.get().value
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
         print ('populating datastore !')
         storage = Storage()
         storage.populate("key2", "value2")
-        #score = storage.get_score()
+        #score = storage.get_value("key2")
+        #query = storage.query(Score.key == "key2")
 
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.write('populating db key value with key2, value2 !')
