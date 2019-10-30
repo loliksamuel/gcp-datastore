@@ -25,29 +25,36 @@ import random
 
 
 class Score(ndb.Model):
-    score = ndb.IntegerProperty()
-    timestamp = ndb.DateTimeProperty(auto_now_add=True)
+    ##score     = ndb.IntegerProperty()
+    ##timestamp = ndb.DateTimeProperty(auto_now_add=True)
+    key       = ndb.StringProperty()
+    value     = ndb.StringProperty()
 
 
 class Storage():
     def score_key(self):
         return ndb.Key('Score', 'Store')
 
-    def populate(self):
+    def populate(self, key, value):
         new_score = Score(parent=self.score_key())
-        new_score.score = random.randint(1, 1234)
+        new_score.key = key#+random.randint(1, 1234)
+        new_score.value = value#+random.randint(1, 1234)
         new_score.put()
 
     def get_score(self):
-        score_query = Score.query(ancestor=self.score_key()).order(-Score.timestamp)
+        score_query = Score.query(ancestor=self.score_key())#.order(-Score.timestamp)
         return score_query.get().score
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-        print ('gettt')
+        print ('populating datastore !')
+        storage = Storage()
+        storage.populate("key2", "value2")
+        #score = storage.get_score()
+
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('Hello db key value simon !')
-        self.response.write(' gcloud app deploy succeeded !')
+        self.response.write('populating db key value with key2, value2 !')
+
 
 class GetHandler(webapp2.RequestHandler):
     def get(self):
@@ -76,6 +83,12 @@ class SetHandler(webapp2.RequestHandler):
         variable_name  = self.request.get('name')
         variable_value = self.request.get('value')
 
+        storage = Storage()
+        storage.populate(variable_name, variable_value)
+
+        # Score.key = variable_name
+        # Score.value = variable_value
+
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.write('/set?name=n&value=v : '+variable_name +"="+variable_value)
         self.response.headers['Content-Type'] = 'text/plain'
@@ -92,14 +105,16 @@ class UnsetHandler(webapp2.RequestHandler):
 
 class NumEqualToHandler(webapp2.RequestHandler):
     def get(self):
-        print ('/numequalto')
+        print ('/numequalto?value=val1')
         variable_value = self.request.get('value')
+        query = Score.query(Score.value == variable_value)
+        counter = query.count()
         # variable_value = 0
         # query = client.query(kind='Task')
         # query.add_filter('start', '=', variable_value)
 
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('/numequalto  variable_value='+variable_value)
+        self.response.write('/numequalto  found this value '+counter+' times')
 
 
 class UndoHandler(webapp2.RequestHandler):
