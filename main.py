@@ -80,15 +80,13 @@ class UnsetHandler(webapp2.RequestHandler):
     def get(self):
         print ('/unset?name=n')
         variable_name = self.request.get('name')
-
         elements = KeyVal.query().filter(ndb.AND(KeyVal.name == variable_name, KeyVal.enabled == True))
         if elements.count() > 0:
             element = elements.get()
             element.enabled = False
             element.put()
         self.response.headers['Content-Type'] = 'text/plain'
-        # self.response.write('/unset?name='+variable_name +"   deleted!")
-        self.response.write(variable_name + " = None")
+        self.response.write(variable_name + " = None")#('/unset?name='+variable_name +"   deleted!")
 
 
 class UndoHandler(webapp2.RequestHandler):
