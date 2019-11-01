@@ -14,7 +14,7 @@
 #gcloud projects create dbkeyvalue
 #gcloud config set project dbkeyvalue
 #gcloud app deploy
-
+#https://cloud.google.com/appengine/docs/standard/python/refdocs/google.appengine.ext.ndb.query
 
 import webapp2
 from google.appengine.ext import ndb
@@ -24,58 +24,45 @@ from google.appengine.ext import ndb
 import random
 
 
-class Score(ndb.Model):
+class KeyVal(ndb.Model):
     ##score     = ndb.IntegerProperty()
     ##timestamp = ndb.DateTimeProperty(auto_now_add=True)
-    key       = ndb.StringProperty()
-    value     = ndb.StringProperty()
+    name       = ndb.StringProperty()
+    value      = ndb.StringProperty()
+    enabled    = ndb.BooleanProperty()
 
 
 class Storage():
     def score_key(self):
-        return ndb.Key('Score', 'Store')
+        return ndb.Key('KeyVal', 'KeyVal')
 
-    def populate(self, key, value):
-        new_score = Score(parent=self.score_key())
-        new_score.key = key#+random.randint(1, 1234)
-        new_score.value = value#+random.randint(1, 1234)
-        new_score.put()
+    def populate(self, name, value, enabled):
+        key_val       = KeyVal(parent=self.score_key())
+        key_val.name    = name#+random.randint(1, 1234)
+        key_val.value   = value#+random.randint(1, 1234)
+        key_val.enabled = enabled#+random.randint(1, 1234)
+        key_val.put()
 
     def get_value(self, key):
-        score_query = Score.query(ancestor=key)#.order(-Score.timestamp)
+        #score_query = Score.query(ancestor=key)#.order(-Score.timestamp)
+        score_query = KeyVal.query(kind='Score')#.order(-Score.timestamp)
         return score_query.get().value
+
+
+
+
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-        print ('populating datastore !')
+        print ('main! populating datastore !')
         storage = Storage()
-        storage.populate("key2", "value2")
+        storage.populate("name", "value", False)
         #score = storage.get_value("key2")
         #query = storage.query(Score.key == "key2")
 
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.write('populating db key value with key2, value2 !')
 
-
-class GetHandler(webapp2.RequestHandler):
-    def get(self):
-        print ('gettt')
-        variable_name = self.request.get('name')
-        print ('variable_name='+variable_name)
-        k = ndb.Key(urlsafe=variable_name)
-        v = k.get()
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('the value of the variable variable_name '+variable_name+' is '+v+'.')
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('get !')
-
-    def get_key(client):
-        # [START datastore_named_key]
-        #client = datastore.Client()#"project_id")
-        key = client.key('Task', 'sample_task')
-        # [END datastore_named_key]
-
-        return key
 
 class SetHandler(webapp2.RequestHandler):
     def get(self):
@@ -85,7 +72,7 @@ class SetHandler(webapp2.RequestHandler):
         variable_value = self.request.get('value')
 
         storage = Storage()
-        storage.populate(variable_name, variable_value)
+        storage.populate(variable_name, variable_value, True)
 
         # Score.key = variable_name
         # Score.value = variable_value
@@ -96,19 +83,77 @@ class SetHandler(webapp2.RequestHandler):
         #self.response.write('set !')
 
 
+class GetHandler(webapp2.RequestHandler):
+    def get(self):
+        print ('/get?name=n')
+        variable_name = self.request.get('name')
+        print ('variable_name='+variable_name)
+        #v = variable_name.get()
+        #try:
+        list = KeyVal.query().filter(ndb.AND(KeyVal.name == variable_name, KeyVal.enabled == True))
+        keyval = list.get()
+        #     k = ndb.Key(urlsafe=variable_name)
+        #     if not k:
+        #         v = None
+        #     else:
+        #         v = k.get()
+        # except TypeError, e1 :
+        #     v = None
+        #     #raise ValueError(e1.message)
+        # except Exception, e2:
+        #     v = None
+        #     # if e2.__class__.__name__ == 'ProtocolBufferDecodeError':
+        #     #     raise ValueError(e2.message)
+        #     # else:
+        #     #     raise ValueError(e2.message)
+
+
+        self.response.headers['Content-Type'] = 'text/plain'
+        if keyval == None:
+            self.response.write('{0}\n'.format(keyval))
+        else:
+            self.response.write('{0}\n'.format(keyval.value))
+        #for keyval in list:
+         #   self.response.write('{0}\n'.format(keyval.value))
+        #self.response.write('k =  {0}'.format([k]))
+
+        #self.response.headers['Content-Type'] = 'text/plain'
+        #self.response.write('get !')
+
+
 class UnsetHandler(webapp2.RequestHandler):
     def get(self):
-        print ('/unset')
+        print ('/unset?name=n')
         variable_name = self.request.get('name')
+
+        #query = KeyVal.query().filter(KeyVal.key == variable_name)
+        #keyval = query.get()
+        #keyval.key.delete()
+        list = KeyVal.query().filter(ndb.AND(KeyVal.name == variable_name, KeyVal.enabled == True))
+        keyval = list.get()
+        keyval.enabled = False
+        keyval.put()
+        # list = KeyVal.query().filter(KeyVal.name == variable_name)
+        # for l in list.fetch(limit = 1):
+        #     l.key.delete()
+
+        #keyval = ndb.Key("KeyVal", variable_name).get()
+        #keyval.key.delete()
+
+
+
+        # for keyval in list:
+        #     #self.response.write('{0}\n'.format(keyval.value))
+        #     keyval.key.delete()
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('/unset?name='+variable_name)
+        self.response.write('/unset?name='+variable_name +"   deleted!")
 
 
 class NumEqualToHandler(webapp2.RequestHandler):
     def get(self):
         print ('/numequalto?value=val1')
         variable_value = self.request.get('value')
-        query = Score.query(Score.value == variable_value)
+        query = KeyVal.query(KeyVal.value == variable_value)
         counter = query.count()
         # variable_value = 0
         # query = client.query(kind='Task')
