@@ -1,16 +1,4 @@
-# Copyright 2016 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+
 #gcloud projects create dbkeyvalue
 #gcloud config set project dbkeyvalue
 #gcloud app deploy
@@ -22,13 +10,9 @@ import config
 #from google.cloud import ndb
 #from google.cloud import datastore
 #import google.cloud.exceptions
-import random
-
-
 
 
 class KeyVal(ndb.Model):
-    ##score     = ndb.IntegerProperty()
     ##timestamp = ndb.DateTimeProperty(auto_now_add=True)
     name       = ndb.StringProperty()
     value      = ndb.StringProperty()
@@ -40,11 +24,18 @@ class Storage():
         return ndb.Key('KeyVal', 'KeyVal')
 
     def populate(self, name, value, enabled):
-        key_val       = KeyVal(parent=self.score_key())
+        list = KeyVal.query().filter(KeyVal.name == name)
+        if list.count() == 0:
+            key_val       = KeyVal(parent=self.score_key())
+        else:
+            key_val = list.get()
+
         key_val.name    = name#+random.randint(1, 1234)
         key_val.value   = value#+random.randint(1, 1234)
         key_val.enabled = enabled#+random.randint(1, 1234)
         key_val.put()
+
+
 
     def get_value(self, key):
         #score_query = Score.query(ancestor=key)#.order(-Score.timestamp)
@@ -57,14 +48,8 @@ class Storage():
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-        print ('main! populating datastore !')
-        storage = Storage()
-        storage.populate("name", "value", False)
-        #score = storage.get_value("key2")
-        #query = storage.query(Score.key == "key2")
-
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('populating db key value with key2, value2 !')
+        self.response.write('main !')
 
 
 class GetHandler(webapp2.RequestHandler):
@@ -72,38 +57,14 @@ class GetHandler(webapp2.RequestHandler):
         print ('/get?name=n')
         variable_name = self.request.get('name')
         print ('variable_name='+variable_name)
-        #v = variable_name.get()
-        #try:
         list = KeyVal.query().filter(ndb.AND(KeyVal.name == variable_name, KeyVal.enabled == True))
         keyval = list.get()
-        #     k = ndb.Key(urlsafe=variable_name)
-        #     if not k:
-        #         v = None
-        #     else:
-        #         v = k.get()
-        # except TypeError, e1 :
-        #     v = None
-        #     #raise ValueError(e1.message)
-        # except Exception, e2:
-        #     v = None
-        #     # if e2.__class__.__name__ == 'ProtocolBufferDecodeError':
-        #     #     raise ValueError(e2.message)
-        #     # else:
-        #     #     raise ValueError(e2.message)
-
 
         self.response.headers['Content-Type'] = 'text/plain'
         if keyval == None:
             self.response.write('{0}\n'.format(keyval))
         else:
             self.response.write('{0}\n'.format(keyval.value))
-        #for keyval in list:
-        #   self.response.write('{0}\n'.format(keyval.value))
-        #self.response.write('k =  {0}'.format([k]))
-
-        #self.response.headers['Content-Type'] = 'text/plain'
-        #self.response.write('get !')
-
 
 
 
@@ -113,29 +74,14 @@ class SetHandler(webapp2.RequestHandler):
         print ('/set?name=n&value=v')
         variable_name  = self.request.get('name')
         variable_value = self.request.get('value')
-
-        list = KeyVal.query().filter(KeyVal.name == variable_name)
-        if (list.count()==0):
-            storage = Storage()
-            storage.populate(variable_name, variable_value, True)
-        else:
-            keyval = list.get()
-            keyval.value=variable_value
-            keyval.enabled = True
-            keyval.put()
-
-
-
-        # Score.key = variable_name
-        # Score.value = variable_value
-
+        storage = Storage()
+        storage.populate(variable_name, variable_value, True)
         self.response.headers['Content-Type'] = 'text/plain'
         #self.response.write('/set?name=n&value=v : '+variable_name +"="+variable_value)
         self.response.write(variable_name +" = " + variable_value)
-
         config._history_index += 1
         config._history_list.append((variable_name, variable_value, True))
-        #self.response.write('set !')
+
 
 
 class UnsetHandler(webapp2.RequestHandler):
@@ -143,30 +89,15 @@ class UnsetHandler(webapp2.RequestHandler):
         print ('/unset?name=n')
         variable_name = self.request.get('name')
 
-        #query = KeyVal.query().filter(KeyVal.key == variable_name)
-        #keyval = query.get()
-        #keyval.key.delete()
         list = KeyVal.query().filter(ndb.AND(KeyVal.name == variable_name, KeyVal.enabled == True))
-        keyval = list.get()
-        keyval.enabled = False
-        keyval.put()
-        # list = KeyVal.query().filter(KeyVal.name == variable_name)
-        # for l in list.fetch(limit = 1):
-        #     l.key.delete()
-
-        #keyval = ndb.Key("KeyVal", variable_name).get()
-        #keyval.key.delete()
-
-
-
-        # for keyval in list:
-        #     #self.response.write('{0}\n'.format(keyval.value))
-        #     keyval.key.delete()
+        if list.count() > 0 :
+            keyval = list.get()
+            keyval.enabled = False
+            keyval.put()
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('/unset?name='+variable_name +"   deleted!")
+        #self.response.write('/unset?name='+variable_name +"   deleted!")
+        self.response.write(variable_name +" = None")
 
-        config._history_index += 1
-        config._history_list.append((variable_name, keyval.value, False))
 
 
 class UndoHandler(webapp2.RequestHandler):
@@ -176,14 +107,25 @@ class UndoHandler(webapp2.RequestHandler):
         print ('/undo')
         self.response.headers['Content-Type'] = 'text/plain'
 
-
-        if config._history_index > 0:
-            config._history_index -= 1
-            state = config._history_list[config._history_index]
-            #self._commands[state[1]].execute(state[2])
+        if config._history_index > -1:
+            state_curr = config._history_list[config._history_index]
             storage = Storage()
-            storage.populate(state[0], state[1], state[2])
-            self.response.write(state)
+            if config._history_index  < 1:
+                storage.populate(state_curr[0], state_curr[1], False)
+                self.response.write(state_curr[0] + " = None")# +(not state_curr[2]))
+                config._history_index -= 1
+            else:
+                config._history_index -= 1
+                state_prev = config._history_list[config._history_index]
+
+                if state_curr[0] == state_prev[0]:
+                    storage.populate(state_prev[0], state_prev[1], state_prev[2])
+                    self.response.write(state_prev[0] + " = " +state_prev[1])
+                else:
+                    storage.populate(state_curr[0], state_curr[1], False)
+                    config._history_list.remove(state_curr)
+                    self.response.write(state_curr[0] + " = None")# +(not state_curr[2]))
+
             self.response.write(' \ncurrent index:{0}'.format(config._history_index))
 
         else:
@@ -196,10 +138,9 @@ class RedoHandler(webapp2.RequestHandler):
         if config._history_index + 1 < len(config._history_list):
             config._history_index += 1
             state = config._history_list[config._history_index]
-            #self._commands[state[1]].execute(state[2])
             storage = Storage()
             storage.populate(state[0], state[1], state[2])
-            self.response.write(state)
+            self.response.write(state[0] + " = " +state[1])
             self.response.write(' \ncurrent index:{0}'.format(config._history_index))
 
         else:
@@ -232,12 +173,7 @@ class NumEqualToHandler(webapp2.RequestHandler):
         print ('/numequalto?value=val1')
         variable_value = self.request.get('value')
         list = KeyVal.query().filter(ndb.AND(KeyVal.value == variable_value, KeyVal.enabled == True))
-        #keyval = list.get()
         counter = list.count()
-        # variable_value = 0
-        # query = client.query(kind='Task')
-        # query.add_filter('start', '=', variable_value)
-
         self.response.headers['Content-Type'] = 'text/plain'
         #self.response.write('/numequalto  found this value {0}'.format(counter)+' times')
         self.response.write(counter)
@@ -268,9 +204,5 @@ app = webapp2.WSGIApplication([
     ('/historyclear', HistoryClearHandler),
     ('/numequalto', NumEqualToHandler),
     ('/end'  ,   EndHandler),
-    #('/new'  ,   NewHandler),
+
 ], debug=False)
-
-
-
-
