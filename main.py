@@ -177,21 +177,16 @@ class RedoHandler(webapp2.RequestHandler):
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.write('RedoHandler !')
 
-
+# Exit the program.
+# remove all your data from the application (clean all the Datastore entities).
+# Print CLEANED when done.
 class EndHandler(webapp2.RequestHandler):
     def get(self):
-        print ('EndHandler')
-        kind_list = ['Task']
-
-        #namespace_manager.set_namespace(namespace) # will set to the namespace provided
-
-        for a_kind in kind_list:
-            # will fetch keys of all objects in that kind
-            kind_keys = a_kind.gql("").fetch(keys_only = True)
-            # will delete all the keys at once
-            ndb.delete_multi(kind_keys)
+        print ('/end')
+        ndb.delete_multi(KeyVal.query().fetch(keys_only=True))
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('EndHandler !')
+        self.response.write('db CLEANED !')
+
 
 
 
