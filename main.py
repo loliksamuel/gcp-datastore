@@ -18,10 +18,13 @@
 
 import webapp2
 from google.appengine.ext import ndb
+import config
 #from google.cloud import ndb
 #from google.cloud import datastore
 #import google.cloud.exceptions
 import random
+
+
 
 
 class KeyVal(ndb.Model):
@@ -64,25 +67,6 @@ class MainHandler(webapp2.RequestHandler):
         self.response.write('populating db key value with key2, value2 !')
 
 
-class SetHandler(webapp2.RequestHandler):
-    def get(self):
-
-        print ('/set?name=n&value=v')
-        variable_name  = self.request.get('name')
-        variable_value = self.request.get('value')
-
-        storage = Storage()
-        storage.populate(variable_name, variable_value, True)
-
-        # Score.key = variable_name
-        # Score.value = variable_value
-
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('/set?name=n&value=v : '+variable_name +"="+variable_value)
-        self.response.headers['Content-Type'] = 'text/plain'
-        #self.response.write('set !')
-
-
 class GetHandler(webapp2.RequestHandler):
     def get(self):
         print ('/get?name=n')
@@ -114,11 +98,44 @@ class GetHandler(webapp2.RequestHandler):
         else:
             self.response.write('{0}\n'.format(keyval.value))
         #for keyval in list:
-         #   self.response.write('{0}\n'.format(keyval.value))
+        #   self.response.write('{0}\n'.format(keyval.value))
         #self.response.write('k =  {0}'.format([k]))
 
         #self.response.headers['Content-Type'] = 'text/plain'
         #self.response.write('get !')
+
+
+
+
+class SetHandler(webapp2.RequestHandler):
+    def get(self):
+
+        print ('/set?name=n&value=v')
+        variable_name  = self.request.get('name')
+        variable_value = self.request.get('value')
+
+        list = KeyVal.query().filter(KeyVal.name == variable_name)
+        if (list.count()==0):
+            storage = Storage()
+            storage.populate(variable_name, variable_value, True)
+        else:
+            keyval = list.get()
+            keyval.value=variable_value
+            keyval.enabled = True
+            keyval.put()
+
+
+
+        # Score.key = variable_name
+        # Score.value = variable_value
+
+        self.response.headers['Content-Type'] = 'text/plain'
+        #self.response.write('/set?name=n&value=v : '+variable_name +"="+variable_value)
+        self.response.write(variable_name +" = " + variable_value)
+
+        config._history_index += 1
+        config._history_list.append((variable_name, variable_value, True))
+        #self.response.write('set !')
 
 
 class UnsetHandler(webapp2.RequestHandler):
@@ -148,6 +165,67 @@ class UnsetHandler(webapp2.RequestHandler):
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.write('/unset?name='+variable_name +"   deleted!")
 
+        config._history_index += 1
+        config._history_list.append((variable_name, keyval.value, False))
+
+
+class UndoHandler(webapp2.RequestHandler):
+    def get(self):
+        """Undo a command if there is a command that can be undone.
+        Update the history position with correct index, for  further UNDOs or REDOs """
+        print ('/undo')
+        self.response.headers['Content-Type'] = 'text/plain'
+
+
+        if config._history_index > 0:
+            config._history_index -= 1
+            state = config._history_list[config._history_index]
+            #self._commands[state[1]].execute(state[2])
+            storage = Storage()
+            storage.populate(state[0], state[1], state[2])
+            self.response.write(state)
+            self.response.write(' \ncurrent index:{0}'.format(config._history_index))
+
+        else:
+            self.response.write('NO COMMANDS')
+
+class RedoHandler(webapp2.RequestHandler):
+    def get(self):
+        print ('/redo')
+        self.response.headers['Content-Type'] = 'text/plain'
+        if config._history_index + 1 < len(config._history_list):
+            config._history_index += 1
+            state = config._history_list[config._history_index]
+            #self._commands[state[1]].execute(state[2])
+            storage = Storage()
+            storage.populate(state[0], state[1], state[2])
+            self.response.write(state)
+            self.response.write(' \ncurrent index:{0}'.format(config._history_index))
+
+        else:
+            self.response.write('NO COMMANDS')
+
+
+class HistoryShowHandler(webapp2.RequestHandler):
+    def get(self):
+        """Return all records in the History list"""
+        print ('/historyshow')
+        self.response.headers['Content-Type'] = 'text/plain'
+        self.response.write(config._history_list )
+        self.response.write(' \ncurrent index:{0}'.format(config._history_index))
+
+
+class HistoryClearHandler(webapp2.RequestHandler):
+    def get(self):
+        """Return all records in the History list"""
+        print ('/historyclear')
+        self.response.headers['Content-Type'] = 'text/plain'
+        config._history_list = []
+        config._history_index = -1
+        self.response.write(config._history_list )
+        self.response.write(' \ncurrent index:{0}'.format(config._history_index))
+
+
 
 class NumEqualToHandler(webapp2.RequestHandler):
     def get(self):
@@ -161,53 +239,22 @@ class NumEqualToHandler(webapp2.RequestHandler):
         # query.add_filter('start', '=', variable_value)
 
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('/numequalto  found this value {0}'.format(counter)+' times')
+        #self.response.write('/numequalto  found this value {0}'.format(counter)+' times')
+        self.response.write(counter)
 
 
-class UndoHandler(webapp2.RequestHandler):
-    def get(self):
-        print ('UndoHandler')
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('UndoHandler !')
-
-
-class RedoHandler(webapp2.RequestHandler):
-    def get(self):
-        print ('RedoHandler')
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('RedoHandler !')
-
-# Exit the program.
-# remove all your data from the application (clean all the Datastore entities).
-# Print CLEANED when done.
 class EndHandler(webapp2.RequestHandler):
+    """Exit the program.
+    remove all your data from the application (clean all the Datastore entities).
+    Print CLEANED when done."""
     def get(self):
         print ('/end')
         ndb.delete_multi(KeyVal.query().fetch(keys_only=True))
+        config._history_list = []
+        config._history_index = -1
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.write('db CLEANED !')
 
-
-
-
-        # app = webapp2.WSGIApplication([
-#     ('/', MainPage),
-# ], debug=True)
-
-# class NewHandler(webapp2.RequestHandler):
-#     def get(self):
-#         client = datastore.Client('dbkeyvalue')
-#         print ('NewHandler')
-#         task = datastore.Entity(client.key('Tasks'))
-#         task.update({
-#             'category': 'Personal',
-#             'done': False,
-#             'priority': 4,
-#             'description': 'Learn Cloud Datastore'
-#         })
-#
-#         self.response.headers['Content-Type'] = 'text/plain'
-#         self.response.write('New Entity created !')
 
 
 app = webapp2.WSGIApplication([
@@ -215,11 +262,15 @@ app = webapp2.WSGIApplication([
     ('/get'  ,	GetHandler),
     ('/set'  , 	SetHandler),
     ('/unset',  UnsetHandler),
-    ('/numequalto', NumEqualToHandler),
     ('/undo' , 	 UndoHandler),
     ('/redo' , 	 RedoHandler),
+    ('/historyshow', HistoryShowHandler),
+    ('/historyclear', HistoryClearHandler),
+    ('/numequalto', NumEqualToHandler),
     ('/end'  ,   EndHandler),
     #('/new'  ,   NewHandler),
-     ], debug=False)
+], debug=False)
+
+
 
 
