@@ -153,14 +153,15 @@ class NumEqualToHandler(webapp2.RequestHandler):
     def get(self):
         print ('/numequalto?value=val1')
         variable_value = self.request.get('value')
-        query = KeyVal.query(KeyVal.value == variable_value)
-        counter = query.count()
+        list = KeyVal.query().filter(ndb.AND(KeyVal.value == variable_value, KeyVal.enabled == True))
+        #keyval = list.get()
+        counter = list.count()
         # variable_value = 0
         # query = client.query(kind='Task')
         # query.add_filter('start', '=', variable_value)
 
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('/numequalto  found this value '+counter+' times')
+        self.response.write('/numequalto  found this value {0}'.format(counter)+' times')
 
 
 class UndoHandler(webapp2.RequestHandler):
