@@ -1,4 +1,6 @@
-# Here are the commands you need to handle:
+# gcp web app using datastore as a document db
+
+# API includes:
  
 SET – [http://_your-app-id_.appspot.com/set?name={variable_name}&value={variable_value}] 
 Set the variable variable_name to the value variable_value, neither variable names nor values will contain spaces. Print the variable name and value after the change.
@@ -25,9 +27,9 @@ Exit the program. Your program will always receive this as its last command. You
 
  
 
-# Here are some example sequences that will help you in debugging your app:
+# TEST:
 
-## Sequence 1:
+## TEST 1:
 1.     Input: http://_your-app-id_.appspot.com/set?name=ex&value=10
       Output: ex = 10
 2.     Input: http://_your-app-id_.appspot.com/get?name=ex
@@ -39,7 +41,7 @@ Exit the program. Your program will always receive this as its last command. You
 5.     Input: http://_your-app-id_.appspot.com/end
       Output: CLEANED
  
-## Sequence 2:
+## TEST 2:
 1.     Input: http://_your-app-id_.appspot.com/set?name=a&value=10
       Output: a = 10
 2.     Input: http://_your-app-id_.appspot.com/set?name=b&value=10
@@ -55,7 +57,7 @@ Exit the program. Your program will always receive this as its last command. You
 7.     Input: http://_your-app-id_.appspot.com/end
       Output: CLEANED
  
-## Sequence 3:
+## TEST 3:
 1.      Input: http://_your-app-id_.appspot.com/set?name=a&value=10
        Output: a = 10
 2.      Input: http://_your-app-id_.appspot.com/set?name=b&value=20
@@ -74,20 +76,20 @@ Exit the program. Your program will always receive this as its last command. You
       Output:
 9.     Input: http://_your-app-id_.appspot.com/get?name=a
       Output: 40
-10.  Input: http://_your-app-id_.appspot.com/undo
+10.     Input: http://_your-app-id_.appspot.com/undo
       Output: a = 10
-11.  Input: http://_your-app-id_.appspot.com/get?name=a
+11.     Input:: http://_your-app-id_.appspot.com/get?name=a
       Output: 10
-12.  Input: http://_your-app-id_.appspot.com/undo
+12.     Input:: http://_your-app-id_.appspot.com/undo
       Output: a = None
-13.  Input: http://_your-app-id_.appspot.com/get?name=a
+13.     Input:: http://_your-app-id_.appspot.com/get?name=a
       Output: None
-14.  Input: http://_your-app-id_.appspot.com/undo
+14.     Input:: http://_your-app-id_.appspot.com/undo
       Output: NO COMMANDS
-15. INPUT: http://_your-app-id_.appspot.com/redo
+15.     Input:: http://_your-app-id_.appspot.com/redo
       Output: a = 10
-16. INPUT: http://_your-app-id_.appspot.com/redo
+16.     Input:: http://_your-app-id_.appspot.com/redo
       Output: a = 40
-15.   Input: http://_your-app-id_.appspot.com/end
-      Output: CLEANED
+15.     Input:: http://_your-app-id_.appspot.com/end
+       Output: CLEANED
  
